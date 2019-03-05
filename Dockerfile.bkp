@@ -1,7 +1,6 @@
-FROM ubuntu:16.04
-RUN apt update && \
-    apt install -y openjdk-8-jdk
-
+# FROM anapsix/alpine-java
+FROM alpine:3.5
+RUN apk --update add openjdk7-jre
 
 MAINTAINER "Rishab Banerjee<loccapollo@gmail.conm>"
 
@@ -10,7 +9,8 @@ ENV SCALA_VERSION="2.12.8" \
     SBT_VERSION="1.2.8" \
     SCALA_HOME="/usr/share/scala" \
     SBT_HOME="/usr/share/sbt"
-RUN apt update && apt install -y wget ca-certificates && \
+RUN apk update && apk add --no-cache --virtual=.build-dependencies wget ca-certificates && \
+    apk add --no-cache bash && \
     cd "/tmp" && \
     wget "https://downloads.typesafe.com/scala/${SCALA_VERSION}/scala-${SCALA_VERSION}.tgz" && \
     tar xzf "scala-${SCALA_VERSION}.tgz" && \
@@ -18,16 +18,14 @@ RUN apt update && apt install -y wget ca-certificates && \
     rm "/tmp/scala-${SCALA_VERSION}/bin/"*.bat && \
     mv "/tmp/scala-${SCALA_VERSION}/bin" "/tmp/scala-${SCALA_VERSION}/lib" "${SCALA_HOME}" && \
     ln -s "${SCALA_HOME}/bin/"* "/usr/bin/" && \
-    apt autoremove && \
+    apk del .build-dependencies && \
     rm -rf "/tmp/"*
 
-
 # tools installation, should be at LAST, to keep build time minimal
-RUN apt update && apt install -y \
+RUN apk update && apk add --no-cache --virtual=.build-dependencies \
     curl \
     vim \
-    openssh-client \
-    openssh-server
+    openssh
 
 # install hadoop
 ENV HADOOP_VERSION="3.2.0"
@@ -65,25 +63,10 @@ RUN cd "/tmp" && \
 #    echo "export SPARK_WORKER_DIR=/hadoop-data" >> "conf/spark-env.sh" && \
     rm -rf "/tmp/*" && \
     mkdir "/spark-data"
-#    bash "sbin/start-all.sh" && \
-#    bash "jps"
+#    bash "sbin/start-all.sh"
+#    bash "jbs"
 
-# set JAVA_HOME, currently done manually
-# sed -i.bak s/# JAVA_HOME/JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64//g  etc/hadoop/hadoop-env.sh
 
-# password-less ssh
-RUN apt install -y apt-utils ssh && \
-    ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && \
-    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys && \
-    chmod 0600 ~/.ssh/authorized_keys
 
-# fix java home
-RUN echo "export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64" >> /etc/hadoop/hadoop-env.sh
-ENV HDFS_NAMENODE_USER="root" \
-    HDFS_DATANODE_USER="root" \
-    HDFS_SECONDARYNAMENODE_USER="root" \
-    YARN_RESOURCEMANAGER_USER="root" \
-    YARN_NODEMANAGER_USER="root"
 
-# ENTRYPOINT vs CMD: https://www.youtube.com/watch?v=OYbEWUbmk90
-# ENTRYPOINT ["/hadoop-data/./setupHadoop.sh"]
+
